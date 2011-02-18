@@ -14,6 +14,17 @@ typedef long ftrace_word_t;
 
 #define FTRACE_WORD_SIZE sizeof(ftrace_word_t)
 
+
+/**
+ * Syscall tracing info.
+ */
+struct syscall_info {
+  long int sysnum;
+  long int rc;
+  long int p1, p2, p3, p4, p5, p6;
+};
+
+
 /**
  * Trace task.
  * Single execution thread to trace syscall entering/exiting. 
@@ -73,16 +84,9 @@ unsigned task_peekstr(struct ftrace_task* task, const void* uaddr, char* out_str
 
 
 /**
- * Read syscall number.
- * Task should be entering a syscall, otherwise result is undefined.
+ * Get syscall info for traced task.
  */
-int task_syscall_num(struct ftrace_task* task);
-
-
-long int task_syscall_p1(struct ftrace_task* task);
-long int task_syscall_p2(struct ftrace_task* task);
-long int task_syscall_p3(struct ftrace_task* task);
-long int task_syscall_retval(struct ftrace_task* task);
+void task_syscall_info(struct ftrace_task* task, struct syscall_info* out_info);
 
 #endif
 

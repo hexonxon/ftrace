@@ -83,37 +83,30 @@ unsigned task_peekstr(struct ftrace_task* task, const void* uaddr, char* out_str
 }
 
 
-int task_syscall_num(struct ftrace_task* task)
+void task_syscall_info(struct ftrace_task* task, struct syscall_info* out_info)
 {
-	return ptrace(PTRACE_PEEKUSER, task->pid, ORIG_RAX * FTRACE_WORD_SIZE, NULL);
+  struct user_regs_struct regs;
+  ptrace(PTRACE_GETREGS, task->pid, NULL, &regs);
+
+#ifdef x86_64
+  out_info->sysno = regs.orig_rax;
+  out_info->rc = regs.rax;
+  out_info->p1 = regs.rdi;
+  out_info->p2 = regs.rsi;
+  out_info->p3 = regs.rdx;
+  out_info->p4 = regs.r10;
+  out_info->p5 = regs.r8;
+  out_info->p6 = regs.r9;
+#elif defined(x86_32)
+  out_info->sysno = regs.orig_eax;
+  out_info->rc = regs.eax;
+  out_info->p1 = regs.ebx;
+  out_info->p2 = regs.ecx;
+  out_info->p3 = regs.edx;
+  out_info->p4 = regs.esi;
+  out_info->p5 = regs.edi;
+  out_info->p6 = regs.ebp;
+#endif
 }
-
-
-long int task_syscall_p1(struct ftrace_task* task)
-{
-	struct user_regs_struct regs;
-	ptrace(PTRACE_GETREGS, task->pid, NULL, &regs);
-	return regs.rdi;
-//	return ptrace(PTRACE_PEEKUSER, task->pid, R9 * __WORDSIZE, NULL);
-}
-
-
-long int task_syscall_p2(struct ftrace_task* task)
-{
-	return ptrace(PTRACE_PEEKUSER, task->pid, RCX * FTRACE_WORD_SIZE, NULL);
-}
-
-
-long int task_syscall_p3(struct ftrace_task* task)
-{
-	return ptrace(PTRACE_PEEKUSER, task->pid, RDX * FTRACE_WORD_SIZE, NULL);
-}
-
-
-long int task_syscall_retval(struct ftrace_task* task)
-{
-	return ptrace(PTRACE_PEEKUSER, task->pid, RAX * FTRACE_WORD_SIZE, NULL);
-}
-
 
 
