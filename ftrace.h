@@ -19,5 +19,13 @@
 #endif
 
 
+// Tracer result codes.
+typedef enum {
+	FTRACE_SUCCESS = 0,
+	FTRACE_NO_MEMORY,
+	FTRACE_INVALID_PROCESS,
+} ftrace_result_t;
+
+
 #endif
 

@@ -1,5 +1,5 @@
 FTRACE=ftrace
-FTRACE_CFLAGS=-g -Wall -DFTRACE_DEBUG
+FTRACE_CFLAGS=-g -Wall -DFTRACE_DEBUG -Dx86_64
 FTRACE_OBJS=task.o ftrace.o
 
 all:$(FTRACE) Makefile

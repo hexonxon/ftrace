@@ -1,31 +1,18 @@
 /**
- * task.h - syscall tracer interface.
+ * task.h
  *
- * Syscall tracer is initialized by creating and running a new process (ftrace_create) or attaching to the existing (ftrace_attach).
+ * Provides traced task context and interface.
+ * Takes care of platform differences in accessing task memory and regs.
  */
 
 #ifndef FTRACE_TASK_H
 #define FTRACE_TASK_H
 
 
-#ifdef FTRACE_DEBUG
-# include <assert.h>
-# include <stdio.h>
-# define FTRACE_ASSERT(pred) 		assert((pred))
-# define FTRACE_LOG(format, args...) 	fprintf(stderr, format, ## args)
-#else
-# define FTRACE_ASSERT(pred)		
-# define FTRACE_LOG(format, args...)	
-#endif
+// ptrace return value and memory access type.
+typedef long ftrace_word_t;
 
-
-/// Tracer result codes.
-typedef enum {
-	kFTrace_Success = 0,
-	kFTrace_NoMemory,
-	kFTrace_InvalidProcess,
-} ftrace_result_t;
-
+#define FTRACE_WORD_SIZE sizeof(ftrace_word_t)
 
 /**
  * Trace task.
@@ -33,43 +20,69 @@ typedef enum {
  * Tracer will keep track of all threads in traced process and its children one task for each thread.
  */
 struct ftrace_task {
-	int			tid;		// target thread id.
-	int			entered;	
-
+	int			pid;		// task process id.
+	int			status;		// task waitpid(2) status.
+	int			in_syscall;	// task is currently inside syscall.
 	struct ftrace_task*	next;		// next task.
 };
 
 
 /**
- * Tracer context.
- * Keeps track of tasks to trace and their status.
+ * Read word from task memory.
+ * 
+ * @uaddr	Process user space address to read the word from.
+ * 
+ * @return	Read word.
  */
-struct tracer_context {
-	struct ftrace_task*	tasks;		// task list.
-	struct ftrace_task*	current;	// current stopped task.
-};
+ftrace_word_t task_peekword(struct ftrace_task* task, const void* uaddr);
 
 
 /**
- * Run new task and trace it.
+ * Read memory from task process.
  * 
- * @name	Executable image path.
- * @argv	argv value to pass to executable.
- * 
- * @return	kFTraceInvalidProcess if executable path is invalid.
+ * @uaddr	Process user space address to start reading from.
+ * @out_buf	Caller buffer to read into.
+ * @nbytes	Number of bytes to read.
  */
-ftrace_result_t ftrace_create(const char* name, char** argv);
+void task_peekmem(struct ftrace_task* task, const void* uaddr, void* out_buf, unsigned nbytes);
 
 
 /**
- * Attach to running process and trace it.
- *
- * @pid		Process id to attach to.
- *
- * @return	kFTraceInvalidProcess if pid is invalid.
+ * Read memory from task process.
+ * 
+ * @uaddr	Process user space base address to start reading from.
+ * @offset	Base address offset.
+ * @out_buf	Caller buffer to read into.
+ * @nbytes	Number of bytes to read.
  */
-ftrace_result_t ftrace_attach(int pid);
+static inline void task_peekmemoff(struct ftrace_task* task, const void* uaddr, unsigned offset, void* out_buf, unsigned nbytes) {
+	task_peekmem(task, (const char*)uaddr + offset, out_buf, nbytes);
+}
 
+
+/**
+ * Read ASCIIZ string from task memory.
+ * 
+ * @uaddr	String adress in process memory.
+ * @out_buf	Caller buffer to read string into.
+ * @bufsiz	Maximum number of bytes to read, including NULL-terminator.
+ * 
+ * @return	Total number of bytes read. Either bufsiz or less if NULL-terminator was found.
+ */
+unsigned task_peekstr(struct ftrace_task* task, const void* uaddr, char* out_str, unsigned bufsiz);
+
+
+/**
+ * Read syscall number.
+ * Task should be entering a syscall, otherwise result is undefined.
+ */
+int task_syscall_num(struct ftrace_task* task);
+
+
+long int task_syscall_p1(struct ftrace_task* task);
+long int task_syscall_p2(struct ftrace_task* task);
+long int task_syscall_p3(struct ftrace_task* task);
+long int task_syscall_retval(struct ftrace_task* task);
 
 #endif
 
